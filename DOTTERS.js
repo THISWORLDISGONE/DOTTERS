@@ -1,5 +1,3 @@
-// Why is this so oddly satisfying?
-
 let size = 15;
 let fadeFactor = 0.05; // Base fade speed
 let paused = false;
@@ -29,10 +27,10 @@ function draw() {
   if (paused) return;
   
 	background(255);
-	const ps = particles.sort((a, b) => a.vel.magSq()-b.vel.magSq());
+	// Removed particle sorting for performance
 	
 	// Fade out active pixels based on their current value
-	for (let i of Array.from(activePixels)) {
+	for (let i of activePixels) {
 		// Higher values fade faster, lower values fade slower
 		const decay = fadeFactor * data[i];
 		data[i] = Math.max(0, data[i] - decay);
@@ -44,7 +42,7 @@ function draw() {
 		}
 	}
 	
-	for(let part of ps) {
+	for(let part of particles) {
 		// Calculate grid bounds around particle
 		const gridX = Math.floor(part.pos.x / size);
 		const gridY = Math.floor(part.pos.y / size);
@@ -53,10 +51,13 @@ function draw() {
 		for(let x = Math.max(0, gridX - radius); x <= Math.min(width/size - 1, gridX + radius); x++) {
 			for(let y = Math.max(0, gridY - radius); y <= Math.min(height/size - 1, gridY + radius); y++) {
 				const i = y * (width/size) + x;
-				const d = new p5.Vector(x * size, y * size);
-				const dist = part.pos.dist(d);
+				const dx = part.pos.x - (x * size);
+				const dy = part.pos.y - (y * size);
+				const distSq = dx * dx + dy * dy;
+				const radiusSq = 100 * 100;
 				
-				if(dist < 100) {
+				if(distSq < radiusSq) {
+					const dist = Math.sqrt(distSq);
 					const ds = dist/5;
 					data[i] += Math.round((chars.length-1)/(ds < 1 ? 1 : ds));
 					if(data[i] > chars.length-1) data[i] = chars.length-1;
@@ -71,6 +72,7 @@ function draw() {
 		text(chars[Math.floor(data[i])], (i % (width/size)) * size, Math.floor(i / (width/size)) * size);
 	}
 	
+	let nextParticles = [];
 	for(let p of particles) {
 		p.pos.add(p.vel);
 		p.vel.rotate(noise(p.pos.x/100, p.pos.y/100)-0.5);
@@ -78,11 +80,18 @@ function draw() {
 		if(p.pos.x > width+20) p.pos.x = -20;
 		if(p.pos.y < -20) p.pos.y = height+20;
 		if(p.pos.y > height+20) p.pos.y = -20;
+		
+		p.life--;
+		if (p.life > 0) {
+			nextParticles.push(p);
+		}
 	}
+	particles = nextParticles;
 }
 
 function mouseDragged(){
-	if(new p5.Vector(mouseX-pmouseX, mouseY-pmouseY).mag() > 5) particles.push({pos: new p5.Vector(mouseX, mouseY), vel: new p5.Vector(mouseX-pmouseX, mouseY-pmouseY).div(4)})
+	if (particles.length > 500) return;
+	if(new p5.Vector(mouseX-pmouseX, mouseY-pmouseY).mag() > 5) particles.push({pos: new p5.Vector(mouseX, mouseY), vel: new p5.Vector(mouseX-pmouseX, mouseY-pmouseY).div(4), life: 200})
 }
 
 // Control functions
@@ -114,8 +123,10 @@ function togglePause() {
 }
 
 function handleTouch(x, y) {
+  if (particles.length > 500) return;
   particles.push({
     pos: new p5.Vector(x, y),
-    vel: new p5.Vector(random(-1, 1), random(-1, 1)).mult(2)
+    vel: new p5.Vector(random(-1, 1), random(-1, 1)).mult(2),
+    life: 200
   });
 }

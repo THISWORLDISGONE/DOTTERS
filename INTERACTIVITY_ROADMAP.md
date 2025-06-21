@@ -80,3 +80,21 @@ gantt
     Physics         :a3, after a1, 2d
     Automation      :a4, after a2, 2d
     Export          :a5, after a2, 1d
+## Git Quick Push Command
+To quickly push changes to GitHub in the future, use this command:
+
+```bash
+git add . && git commit -m "Update: $(date +'%Y-%m-%d %H:%M')" && git push origin main
+```
+
+This command will:
+1. Stage all changes (`git add .`)
+2. Create a commit with a timestamped message
+3. Push to the main branch
+
+For a shorter version:
+```bash
+git add . && git commit -m "Update" && git push
+```
+
+> Always verify there are no sensitive credentials before pushing!

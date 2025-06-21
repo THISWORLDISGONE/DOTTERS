@@ -2,9 +2,39 @@
 <html>
 <head>
   <title>DOTTERS Visualization</title>
+  <link rel="stylesheet" href="styles.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
 </head>
 <body>
+  <div class="control-panel">
+    <div class="control-group">
+      <label for="particleSize">Particle Size</label>
+      <input type="range" id="particleSize" min="5" max="30" value="15">
+      <div class="value-display"><span id="sizeValue">15</span>px</div>
+    </div>
+    
+    <div class="control-group">
+      <label for="fadeSpeed">Fade Speed</label>
+      <input type="range" id="fadeSpeed" min="0.01" max="0.2" step="0.01" value="0.05">
+      <div class="value-display"><span id="fadeValue">0.05</span></div>
+    </div>
+    
+    <div class="control-group">
+      <label for="charSet">Character Set</label>
+      <select id="charSet">
+        <option value="default">Default (● O 0 o • *)</option>
+        <option value="simple">Simple (# $ % &)</option>
+        <option value="geometric">Geometric (■ ▲ ● ◆)</option>
+      </select>
+    </div>
+    
+    <div class="control-group">
+      <button id="clearBtn">Clear Canvas</button>
+      <button id="pauseBtn">Pause</button>
+    </div>
+  </div>
+  
   <script src="DOTTERS.js"></script>
+  <script src="controls.js"></script>
 </body>
 </html>

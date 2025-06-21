@@ -1,7 +1,8 @@
 // Why is this so oddly satisfying?
 
-const size = 15;
-const fadeFactor = 0.05; // Base fade speed
+let size = 15;
+let fadeFactor = 0.05; // Base fade speed
+let paused = false;
 
 let chars = [" ", "*", "•", "o", "0", "O", "●"], // These could be whatever... try something like [" ", "^", "*", ")", "%", "$", "#", "&"], or [" ", "•", "●", "⬤"]
 		data,
@@ -12,9 +13,21 @@ function setup() {
 	createCanvas(~~(windowWidth/size)*size, ~~(windowHeight/size)*size);
 	textFont("monospace", size*2);
 	data = new Array(width/size*height/size).fill().map(_ => 0);
+  
+  // Expose functions to global scope for controls
+  window.DOTTERS = {
+    updateParticleSize,
+    updateFadeSpeed,
+    updateCharSet,
+    clearCanvas,
+    togglePause,
+    handleTouch
+  };
 }
 
 function draw() {
+  if (paused) return;
+  
 	background(255);
 	const ps = particles.sort((a, b) => a.vel.magSq()-b.vel.magSq());
 	
@@ -70,4 +83,39 @@ function draw() {
 
 function mouseDragged(){
 	if(new p5.Vector(mouseX-pmouseX, mouseY-pmouseY).mag() > 5) particles.push({pos: new p5.Vector(mouseX, mouseY), vel: new p5.Vector(mouseX-pmouseX, mouseY-pmouseY).div(4)})
+}
+
+// Control functions
+function updateParticleSize(newSize) {
+  size = newSize;
+  textFont("monospace", size*2);
+  resizeCanvas(~~(windowWidth/size)*size, ~~(windowHeight/size)*size);
+  data = new Array(width/size*height/size).fill().map(_ => 0);
+  activePixels.clear();
+}
+
+function updateFadeSpeed(newSpeed) {
+  fadeFactor = newSpeed;
+}
+
+function updateCharSet(newSet) {
+  chars = newSet;
+}
+
+function clearCanvas() {
+  particles = [];
+  data.fill(0);
+  activePixels.clear();
+}
+
+function togglePause() {
+  paused = !paused;
+  return paused;
+}
+
+function handleTouch(x, y) {
+  particles.push({
+    pos: new p5.Vector(x, y),
+    vel: new p5.Vector(random(-1, 1), random(-1, 1)).mult(2)
+  });
 }

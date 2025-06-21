@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DOTTERS Benchmark Results</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background-color: #f2f2f2; }
+    .chart-container { margin: 20px 0; max-width: 800px; }
+  </style>
+</head>
+<body>
+  <h1>DOTTERS Performance Benchmark Results</h1>
+  
+  <div class="chart-container">
+    <canvas id="fpsChart"></canvas>
+  </div>
+  
+  <div class="chart-container">
+    <canvas id="comparisonChart"></canvas>
+  </div>
+  
+  <h2>Test Results</h2>
+  <table id="resultsTable">
+    <thead>
+      <tr>
+        <th>Test #</th>
+        <th>Particles</th>
+        <th>Size</th>
+        <th>Fade Factor</th>
+        <th>Average FPS</th>
+        <th>Min FPS</th>
+        <th>Max FPS</th>
+      </tr>
+    </thead>
+    <tbody id="resultsBody"></tbody>
+  </table>
+  
+  <button id="downloadCsv">Download CSV</button>
+  
+  <script>
+    // Load results from localStorage
+    const storedResults = localStorage.getItem('dotterBenchmarkResults');
+    if (!storedResults) {
+      document.body.innerHTML = '<h1>No benchmark results found</h1><p>Run benchmarks from the main page to see results.</p>';
+      return;
+    }
+    
+    const testResults = JSON.parse(storedResults);
+
+    // Populate results table
+    const resultsBody = document.getElementById('resultsBody');
+    testResults.forEach(result => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${result.test}</td>
+        <td>${result.particles}</td>
+        <td>${result.size}</td>
+        <td>${result.fade}</td>
+        <td>${result.fps}</td>
+        <td>${result.minFps || 'N/A'}</td>
+        <td>${result.maxFps || 'N/A'}</td>
+      `;
+      resultsBody.appendChild(row);
+    });
+
+    // FPS Timeline Chart
+    const fpsCtx = document.getElementById('fpsChart').getContext('2d');
+    new Chart(fpsCtx, {
+      type: 'line',
+      data: {
+        labels: testResults.map(r => `Test ${r.test}`),
+        datasets: [{
+          label: 'Average FPS',
+          data: testResults.map(r => r.avgFps),
+          borderColor: 'rgb(75, 192, 192)',
+          tension: 0.1,
+          fill: false
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            beginAtZero: false,
+            title: {
+              display: true,
+              text: 'Frames Per Second'
+            }
+          }
+        }
+      }
+    });
+
+    // Comparison Chart
+    const compCtx = document.getElementById('comparisonChart').getContext('2d');
+    new Chart(compCtx, {
+      type: 'bar',
+      data: {
+        labels: testResults.map(r => `Test ${r.test}`),
+        datasets: [{
+          label: 'Average FPS',
+          data: testResults.map(r => r.avgFps),
+          backgroundColor: 'rgba(54, 162, 235, 0.5)',
+          borderColor: 'rgb(54, 162, 235)',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: 'Frames Per Second'
+            }
+          }
+        }
+      }
+    });
+
+    // CSV Download
+    document.getElementById('downloadCsv').addEventListener('click', () => {
+      let csv = 'Test,Particles,Size,Fade Factor,Avg FPS,Min FPS,Max FPS\n';
+      testResults.forEach(result => {
+        csv += `${result.test},${result.particles},${result.size},${result.fade},${result.fps},${result.minFps || 'N/A'},${result.maxFps || 'N/A'}\n`;
+      });
+      
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'benchmark-results.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+  </script>
+</body>
+</html>

@@ -22,18 +22,38 @@
     <div class="control-group">
       <label for="charSet">Character Set</label>
       <select id="charSet">
-        <option value="default">Default (● O 0 o • *)</option>
-        <option value="simple">Simple (# $ % &)</option>
-        <option value="geometric">Geometric (■ ▲ ● ◆)</option>
+        <option value="default">Default</option>
+        <option value="minimal">Minimal</option>
+        <option value="blocks">Blocks</option>
+        <option value="symbols">Symbols</option>
+        <option value="ascii">ASCII</option>
       </select>
     </div>
     
     <div class="control-group">
       <button id="clearBtn">Clear Canvas</button>
       <button id="pauseBtn">Pause</button>
+      <button id="benchmarkBtn">Run Benchmark</button>
     </div>
   </div>
   
+  <div id="resultsContainer" style="display:none; margin-top:20px;">
+    <h2>Benchmark Results</h2>
+    <table id="resultsTable">
+      <thead>
+        <tr>
+          <th>Test</th>
+          <th>Particles</th>
+          <th>Size</th>
+          <th>Fade</th>
+          <th>FPS</th>
+        </tr>
+      </thead>
+      <tbody id="resultsBody"></tbody>
+    </table>
+    <button id="exportCsv">Export CSV</button>
+  </div>
+
   <script src="DOTTERS.js"></script>
   <script src="controls.js"></script>
 </body>

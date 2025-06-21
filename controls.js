@@ -23,13 +23,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Character Set Control
   const charSetSelect = document.getElementById('charSet');
   charSetSelect.addEventListener('change', () => {
-    const sets = {
-      default: [" ", "*", "•", "o", "0", "O", "●"],
-      simple: [" ", "#", "$", "%", "&"],
-      geometric: [" ", "■", "▲", "●", "◆"]
-    };
     if (window.DOTTERS) {
-      window.DOTTERS.updateCharSet(sets[charSetSelect.value]);
+      window.DOTTERS.updateCharSet(charSetSelect.value);
     }
   });
 
@@ -47,12 +42,43 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Benchmark Button
+  const benchmarkBtn = document.getElementById('benchmarkBtn');
+  const resultsContainer = document.getElementById('resultsContainer');
+  benchmarkBtn.addEventListener('click', () => {
+    if (window.DOTTERS) {
+      const benchmarking = window.DOTTERS.toggleBenchmark();
+      benchmarkBtn.textContent = benchmarking ? "Stop Benchmark" : "Run Benchmark";
+      resultsContainer.style.display = benchmarking ? "block" : "none";
+    }
+  });
+  
+  // Set benchmark completion handler
+  if (window.DOTTERS) {
+    window.DOTTERS.onBenchmarkComplete = function(results) {
+      // Store results in localStorage for the results page
+      localStorage.setItem('dotterBenchmarkResults', JSON.stringify(results));
+      
+      // Navigate to results page
+      window.location.href = 'benchmark-results.html';
+      
+      // Re-enable benchmark button
+      document.getElementById('benchmarkBtn').disabled = false;
+      document.getElementById('benchmarkBtn').textContent = 'Run Benchmark';
+    };
+  }
+
   // Keyboard Shortcuts
   document.addEventListener('keydown', (e) => {
     if (e.code === 'Space' && window.DOTTERS) window.DOTTERS.clearCanvas();
     if (e.code === 'KeyP' && window.DOTTERS) {
       const paused = window.DOTTERS.togglePause();
       pauseBtn.textContent = paused ? "Resume" : "Pause";
+    }
+    if (e.code === 'KeyB' && window.DOTTERS) {
+      const benchmarking = window.DOTTERS.toggleBenchmark();
+      benchmarkBtn.textContent = benchmarking ? "Stop Benchmark" : "Run Benchmark";
+      resultsContainer.style.display = benchmarking ? "block" : "none";
     }
   });
 });

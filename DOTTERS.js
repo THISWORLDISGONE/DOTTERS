@@ -1,9 +1,35 @@
+// Benchmarking variables
+let fps = 0;
+let frameCount = 0;
+let lastFpsUpdate = 0;
+let benchmarkMode = false;
+let currentTest = null;
+let testStartTime = 0;
+let testResults = [];
+let testCases = [
+  { particles: 100, size: 15, fade: 0.05 },
+  { particles: 500, size: 15, fade: 0.05 },
+  { particles: 100, size: 30, fade: 0.05 },
+  { particles: 500, size: 30, fade: 0.05 }
+];
+
 let size = 15;
 let fadeFactor = 0.05; // Base fade speed
 let paused = false;
+let emergencyMode = false; // For critical performance situations
+let lastEmergencyActivation = 0;
 
-let chars = [" ", "*", "•", "o", "0", "O", "●"], // These could be whatever... try something like [" ", "^", "*", ")", "%", "$", "#", "&"], or [" ", "•", "●", "⬤"]
-		data,
+// Define multiple glyph sets
+const glyphSets = {
+  default: [" ", "*", "•", "o", "0", "O", "●"],
+  minimal: [" ", ".", ":", "-", "=", "+", "#"],
+  blocks: [" ", "▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"],
+  symbols: [" ", "○", "◔", "◑", "◕", "⬤", "✶", "✺"],
+  ascii: [" ", ".", ":", ";", "o", "O", "0", "@"]
+};
+
+let chars = [...glyphSets.default]; // Start with default set
+let data,
 		particles = [],
 		activePixels = new Set(); // Track active (non-zero) pixels for fadeout
 
@@ -19,15 +45,52 @@ function setup() {
     updateCharSet,
     clearCanvas,
     togglePause,
-    handleTouch
+    handleTouch,
+    toggleBenchmark,
+    generateParticles
   };
 }
 
 function draw() {
   if (paused) return;
   
-	background(255);
-	// Removed particle sorting for performance
+  // Emergency performance mode activation
+  if (fps > 0 && fps < 30 && millis() - lastEmergencyActivation > 5000) {
+    activateEmergencyMode();
+  }
+  
+  // FPS calculation
+  frameCount++;
+  if (millis() - lastFpsUpdate > 1000) {
+    fps = frameCount;
+    frameCount = 0;
+    lastFpsUpdate = millis();
+  }
+  
+  // Emergency mode cooldown
+  if (emergencyMode && fps > 40 && millis() - lastEmergencyActivation > 3000) {
+    emergencyMode = false;
+    fadeFactor = 0.05; // Reset to default
+  }
+  
+  // Benchmark test monitoring
+  if (benchmarkMode && currentTest !== null && millis() - testStartTime > 10000 && !emergencyMode) {
+    recordResults();
+    runNextTest();
+  }
+  
+ background(255);
+ // Removed particle sorting for performance
+ 
+ // Draw FPS counter with emergency mode indicator
+ fill(emergencyMode ? 255 : 0, emergencyMode ? 0 : 0, emergencyMode ? 0 : 0);
+ textSize(16);
+ text(`FPS: ${fps}${emergencyMode ? ' (EMERGENCY MODE)' : ''}`, 10, 20);
+ 
+ // Draw benchmark status
+ if (benchmarkMode) {
+   text(`Test ${currentTest}/${testCases.length}`, 10, 40);
+ }
 	
 	// Fade out active pixels based on their current value
 	for (let i of activePixels) {
@@ -42,11 +105,34 @@ function draw() {
 		}
 	}
 	
-	for(let part of particles) {
-		// Calculate grid bounds around particle
-		const gridX = Math.floor(part.pos.x / size);
-		const gridY = Math.floor(part.pos.y / size);
-		const radius = 10; // Only process 10 grid units around particle
+	// Spatial partitioning optimization
+	const gridSize = size * 2;
+	const gridCols = Math.ceil(width / gridSize);
+	const gridRows = Math.ceil(height / gridSize);
+	const spatialGrid = Array(gridCols * gridRows).fill().map(() => []);
+	
+	// Assign particles to grid cells
+	for (let i = 0; i < particles.length; i++) {
+	  const part = particles[i];
+	  const col = Math.floor(part.pos.x / gridSize);
+	  const row = Math.floor(part.pos.y / gridSize);
+	  if (col >= 0 && col < gridCols && row >= 0 && row < gridRows) {
+	    spatialGrid[row * gridCols + col].push(part);
+	  }
+	}
+	
+	// Process particles in grid cells
+	for (let row = 0; row < gridRows; row++) {
+	  for (let col = 0; col < gridCols; col++) {
+	    const cellIndex = row * gridCols + col;
+	    const cellParticles = spatialGrid[cellIndex];
+	    
+	    // Only process particles in visible cells
+	    for (let part of cellParticles) {
+	      // Calculate grid bounds around particle
+	      const gridX = Math.floor(part.pos.x / size);
+	      const gridY = Math.floor(part.pos.y / size);
+	      const radius = 8; // Reduced radius for performance
 		
 		for(let x = Math.max(0, gridX - radius); x <= Math.min(width/size - 1, gridX + radius); x++) {
 			for(let y = Math.max(0, gridY - radius); y <= Math.min(height/size - 1, gridY + radius); y++) {
@@ -54,7 +140,10 @@ function draw() {
 				const dx = part.pos.x - (x * size);
 				const dy = part.pos.y - (y * size);
 				const distSq = dx * dx + dy * dy;
-				const radiusSq = 100 * 100;
+				let radiusSq = 100 * 100;
+				if (emergencyMode) {
+				  radiusSq = 50 * 50; // Reduce influence radius in emergency mode
+				}
 				
 				if(distSq < radiusSq) {
 					const dist = Math.sqrt(distSq);
@@ -65,6 +154,8 @@ function draw() {
 				}
 			}
 		}
+	    }
+	  }
 	}
 	
 	// Draw only active pixels
@@ -74,24 +165,55 @@ function draw() {
 	
 	let nextParticles = [];
 	for(let p of particles) {
-		p.pos.add(p.vel);
-		p.vel.rotate(noise(p.pos.x/100, p.pos.y/100)-0.5);
-		if(p.pos.x < -20) p.pos.x = width+20;
-		if(p.pos.x > width+20) p.pos.x = -20;
-		if(p.pos.y < -20) p.pos.y = height+20;
-		if(p.pos.y > height+20) p.pos.y = -20;
-		
-		p.life--;
-		if (p.life > 0) {
-			nextParticles.push(p);
-		}
+	  p.pos.add(p.vel);
+	  // Simplify movement in emergency mode
+	  if (!emergencyMode) {
+	    p.vel.rotate(noise(p.pos.x/100, p.pos.y/100)-0.5);
+	  }
+	  if(p.pos.x < -20) p.pos.x = width+20;
+	  if(p.pos.x > width+20) p.pos.x = -20;
+	  if(p.pos.y < -20) p.pos.y = height+20;
+	  if(p.pos.y > height+20) p.pos.y = -20;
+	  
+	  p.life--;
+	  if (p.life > 0) {
+	    nextParticles.push(p);
+	  }
 	}
 	particles = nextParticles;
 }
 
+// Emergency performance measures
+function activateEmergencyMode() {
+	emergencyMode = true;
+	lastEmergencyActivation = millis();
+	
+	// 1. Remove oldest 50% of particles
+	const particlesToKeep = Math.floor(particles.length / 2);
+	particles = particles.slice(-particlesToKeep);
+	
+	// 2. Increase fade rate to clear canvas faster
+	fadeFactor = 0.2;
+	
+	// 3. Skip next frame to allow system to catch up
+	frameRate(30);
+	setTimeout(() => frameRate(60), 1000);
+	
+	console.log("Emergency mode activated");
+}
+
 function mouseDragged(){
-	if (particles.length > 500) return;
-	if(new p5.Vector(mouseX-pmouseX, mouseY-pmouseY).mag() > 5) particles.push({pos: new p5.Vector(mouseX, mouseY), vel: new p5.Vector(mouseX-pmouseX, mouseY-pmouseY).div(4), life: 200})
+  // Block generation if FPS drops below 50
+  if (fps < 50) {
+    // Visual feedback - red FPS counter
+    fill(255, 0, 0);
+    textSize(16);
+    text(`FPS: ${fps} (BLOCKED)`, 10, 20);
+    return;
+  }
+  
+  if (particles.length > 500) return;
+  if(new p5.Vector(mouseX-pmouseX, mouseY-pmouseY).mag() > 5) particles.push({pos: new p5.Vector(mouseX, mouseY), vel: new p5.Vector(mouseX-pmouseX, mouseY-pmouseY).div(4), life: 200})
 }
 
 // Control functions
@@ -107,8 +229,13 @@ function updateFadeSpeed(newSpeed) {
   fadeFactor = newSpeed;
 }
 
-function updateCharSet(newSet) {
-  chars = newSet;
+function updateCharSet(setName) {
+  if (glyphSets[setName]) {
+    chars = [...glyphSets[setName]];
+  } else {
+    console.warn(`Glyph set "${setName}" not found. Using default set.`);
+    chars = [...glyphSets.default];
+  }
 }
 
 function clearCanvas() {
@@ -122,7 +249,81 @@ function togglePause() {
   return paused;
 }
 
+// Generate particles for benchmark tests
+function generateParticles(count) {
+  particles = [];
+  for (let i = 0; i < count; i++) {
+    particles.push({
+      pos: new p5.Vector(random(width), random(height)),
+      vel: new p5.Vector(random(-1, 1), random(-1, 1)).mult(2),
+      life: 10000 // Long life for benchmark tests
+    });
+  }
+}
+
+// Benchmark control functions
+function toggleBenchmark() {
+  benchmarkMode = !benchmarkMode;
+  if (benchmarkMode) {
+    // Start benchmark tests
+    currentTest = 0;
+    runNextTest();
+  } else {
+    // Stop benchmark tests
+    currentTest = null;
+    testResults = [];
+    clearCanvas();
+  }
+  return benchmarkMode;
+}
+
+function runNextTest() {
+  if (currentTest === null || currentTest >= testCases.length) {
+    // Benchmark complete
+    generateCSV();
+    toggleBenchmark();
+    return;
+  }
+  
+  const test = testCases[currentTest];
+  // Apply test parameters
+  size = test.size;
+  fadeFactor = test.fade;
+  resizeCanvas(~~(windowWidth/size)*size, ~~(windowHeight/size)*size);
+  data = new Array(width/size*height/size).fill().map(_ => 0);
+  activePixels.clear();
+  
+  // Generate particles
+  generateParticles(test.particles);
+  
+  // Start test
+  testStartTime = millis();
+  currentTest++;
+}
+
+function recordResults() {
+  const test = testCases[currentTest-1];
+  testResults.push({
+    particles: test.particles,
+    size: test.size,
+    fade: test.fade,
+    fps: fps,
+    timestamp: new Date().toISOString()
+  });
+}
+
+function generateCSV() {
+  let csv = "Particle Count,Size,Fade Factor,FPS,Timestamp\n";
+  for (const result of testResults) {
+    csv += `${result.particles},${result.size},${result.fade},${result.fps},${result.timestamp}\n`;
+  }
+  return csv;
+}
+
 function handleTouch(x, y) {
+  // Block generation if FPS drops below 50
+  if (fps < 50) return;
+  
   if (particles.length > 500) return;
   particles.push({
     pos: new p5.Vector(x, y),

@@ -45,13 +45,20 @@ function setup() {
   // Expose functions to global scope for controls
   window.DOTTERS = {
     updateParticleSize,
+    updateStartSize,
+    updateLifeSize,
     updateFadeSpeed,
     updateCharSet,
     clearCanvas,
     togglePause,
     handleTouch,
     toggleBenchmark,
-    generateParticles
+    generateParticles,
+    setBackgroundColor,
+    setTextColor,
+    setFont,
+    setShapeMode,
+    setGlyphMode
   };
 }
 
@@ -83,7 +90,7 @@ function draw() {
     runNextTest();
   }
   
- background(255);
+ background(bgColor[0], bgColor[1], bgColor[2]);
  // Removed particle sorting for performance
  
  // Draw FPS counter with emergency mode indicator
@@ -173,6 +180,7 @@ function draw() {
 	}
 	
 	// Draw only active pixels
+	fill(textColor[0], textColor[1], textColor[2]);
 	for(let i of activePixels) {
 		text(chars[Math.floor(data[i])], (i % (width/size)) * size, Math.floor(i / (width/size)) * size);
 	}
@@ -192,6 +200,22 @@ function draw() {
 	  if(p.pos.x > width+20) p.pos.x = -20;
 	  if(p.pos.y < -20) p.pos.y = height+20;
 	  if(p.pos.y > height+20) p.pos.y = -20;
+	  
+	  // Calculate particle age
+	  p.age = 1 - (p.life / p.baseLife);
+	  
+	  // Apply droplet shape transformation
+	  if (p.shapeMode === 'droplet' && p.age > 0.7) {
+	    const dropletFactor = map(p.age, 0.7, 1, 0, 1);
+	    p.width = p.size * (1 + dropletFactor * 0.5);
+	    p.height = p.size * (1 - dropletFactor * 0.3);
+	  }
+	  
+	  // Update glyph for animated sequences
+	  if (p.glyphMode === 'animated' && p.glyphSequence && p.glyphSequence.length > 0) {
+	    const seqIndex = floor(map(p.age, 0, 1, 0, p.glyphSequence.length));
+	    p.char = p.glyphSequence[seqIndex];
+	  }
 	  
 	  p.life--;
 	  if (p.life <= 0) {
@@ -246,7 +270,12 @@ function mouseDragged(){
       pos: new p5.Vector(mouseX, mouseY),
       vel: new p5.Vector(mouseX-pmouseX, mouseY-pmouseY).div(4),
       life: baseLife,
-      size: startSize
+      baseLife: baseLife,
+      size: startSize,
+      shapeMode: globalShapeMode,
+      glyphMode: globalGlyphMode,
+      glyphSequence: globalGlyphMode === 'animated' ?
+        [...glyphSets.default] : []
     };
   }
   
@@ -262,6 +291,14 @@ function updateParticleSize(newSize) {
   resizeCanvas(~~(windowWidth/size)*size, ~~(windowHeight/size)*size);
   data = new Array(width/size*height/size).fill().map(_ => 0);
   activePixels.clear();
+}
+
+function updateStartSize(newSize) {
+  startSize = newSize;
+}
+
+function updateLifeSize(newLife) {
+  baseLife = newLife;
 }
 
 function updateFadeSpeed(newSpeed) {
@@ -281,6 +318,40 @@ function clearCanvas() {
   particles = [];
   data.fill(0);
   activePixels.clear();
+}
+
+// Map function implementation (missing in p5.js)
+function map(n, start1, stop1, start2, stop2) {
+  return ((n - start1) / (stop1 - start1)) * (stop2 - start2) + start2;
+}
+
+// Implement new control functions
+let bgColor = [255, 255, 255];
+let textColor = [0, 0, 0];
+let currentFont = "monospace";
+
+function setBackgroundColor(color) {
+  bgColor = color;
+}
+
+function setTextColor(color) {
+  textColor = color;
+}
+
+function setFont(font) {
+  currentFont = font;
+  textFont(currentFont, size*2);
+}
+
+let globalShapeMode = 'circle';
+let globalGlyphMode = 'static';
+
+function setShapeMode(mode) {
+  globalShapeMode = mode;
+}
+
+function setGlyphMode(mode) {
+  globalGlyphMode = mode;
 }
 
 function togglePause() {
@@ -305,7 +376,11 @@ function generateParticles(count) {
         pos: new p5.Vector(random(width), random(height)),
         vel: new p5.Vector(random(-1, 1), random(-1, 1)).mult(2),
         life: 10000,
-        size: startSize
+        baseLife: 10000,
+        size: startSize,
+        shapeMode: 'circle',
+        glyphMode: 'static',
+        glyphSequence: []
       };
     }
     particles.push(particle);
@@ -379,6 +454,12 @@ function handleTouch(x, y) {
   particles.push({
     pos: new p5.Vector(x, y),
     vel: new p5.Vector(random(-1, 1), random(-1, 1)).mult(2),
-    life: 200
+    life: 200,
+    baseLife: 200,
+    size: startSize,
+    shapeMode: globalShapeMode,
+    glyphMode: globalGlyphMode,
+    glyphSequence: globalGlyphMode === 'animated' ?
+      [...glyphSets.default] : []
   });
 }

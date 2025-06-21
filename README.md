@@ -6,10 +6,13 @@ An interactive particle visualization using p5.js where mouse movements create d
 
 ## Features
 - Interactive particle generation
-- Performance optimizations
+- Performance optimizations:
+  - Spatial grid reuse
+  - Object pooling
+  - Typed arrays
 - Fadeout effect based on particle density
 - Spatial partitioning for efficient rendering
-- **NEW**: Real-time parameter controls (particle size, fade speed, character sets)
+- **NEW**: Real-time parameter controls (particle size, fade speed, character sets, starting size, life duration)
 - **NEW**: Pause/resume functionality
 - **NEW**: Mobile touch support
 - **NEW**: Keyboard shortcuts
@@ -30,8 +33,10 @@ An interactive particle visualization using p5.js where mouse movements create d
 
 ## Performance Optimizations
 - Only processes pixels near particles
-- Tracks active pixels for partial redraws
+- Tracks active pixels in typed arrays for fast access
 - Fadeout proportional to pixel value
+- Spatial grid reuse between frames
+- Object pooling for particle recycling
 
 ## Requirements
 - Modern web browser

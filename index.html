@@ -31,6 +31,18 @@
     </div>
     
     <div class="control-group">
+      <label for="startSize">Starting Size</label>
+      <input type="range" id="startSize" min="1" max="50" value="8">
+      <div class="value-display"><span id="startSizeValue">8</span>px</div>
+    </div>
+    
+    <div class="control-group">
+      <label for="lifeSize">Life Duration</label>
+      <input type="range" id="lifeSize" min="10" max="500" value="200">
+      <div class="value-display"><span id="lifeSizeValue">200</span> frames</div>
+    </div>
+    
+    <div class="control-group">
       <button id="clearBtn">Clear Canvas</button>
       <button id="pauseBtn">Pause</button>
       <button id="benchmarkBtn">Run Benchmark</button>

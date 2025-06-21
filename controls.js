@@ -19,6 +19,26 @@ document.addEventListener('DOMContentLoaded', () => {
       window.DOTTERS.updateFadeSpeed(parseFloat(fadeSlider.value));
     }
   });
+  
+  // Starting Size Control
+  const startSizeSlider = document.getElementById('startSize');
+  const startSizeValue = document.getElementById('startSizeValue');
+  startSizeSlider.addEventListener('input', () => {
+    startSizeValue.textContent = startSizeSlider.value;
+    if (window.DOTTERS) {
+      window.DOTTERS.updateStartSize(parseInt(startSizeSlider.value));
+    }
+  });
+  
+  // Life Duration Control
+  const lifeSizeSlider = document.getElementById('lifeSize');
+  const lifeSizeValue = document.getElementById('lifeSizeValue');
+  lifeSizeSlider.addEventListener('input', () => {
+    lifeSizeValue.textContent = lifeSizeSlider.value;
+    if (window.DOTTERS) {
+      window.DOTTERS.updateLifeSize(parseInt(lifeSizeSlider.value));
+    }
+  });
 
   // Character Set Control
   const charSetSelect = document.getElementById('charSet');

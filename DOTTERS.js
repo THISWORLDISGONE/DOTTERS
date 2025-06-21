@@ -15,6 +15,8 @@ let testCases = [
 
 let size = 15;
 let fadeFactor = 0.05; // Base fade speed
+let baseLife = 200; // Default life duration
+let startSize = 8; // Default starting size
 let paused = false;
 let emergencyMode = false; // For critical performance situations
 let lastEmergencyActivation = 0;
@@ -31,7 +33,9 @@ const glyphSets = {
 let chars = [...glyphSets.default]; // Start with default set
 let data,
 		particles = [],
-		activePixels = new Set(); // Track active (non-zero) pixels for fadeout
+		activePixels = new Set(), // Track active (non-zero) pixels for fadeout
+		spatialGrid = null, // For spatial partitioning
+		particlePool = []; // Object pool for particles
 
 function setup() {
 	createCanvas(~~(windowWidth/size)*size, ~~(windowHeight/size)*size);
@@ -105,11 +109,21 @@ function draw() {
 		}
 	}
 	
-	// Spatial partitioning optimization
+	// Spatial partitioning optimization (reused between frames)
 	const gridSize = size * 2;
 	const gridCols = Math.ceil(width / gridSize);
 	const gridRows = Math.ceil(height / gridSize);
-	const spatialGrid = Array(gridCols * gridRows).fill().map(() => []);
+	const gridCellCount = gridCols * gridRows;
+	
+	// Initialize or reuse spatial grid
+	if (!spatialGrid || spatialGrid.length !== gridCellCount) {
+	  spatialGrid = Array(gridCellCount).fill().map(() => []);
+	} else {
+	  // Clear existing grid for reuse
+	  for (let i = 0; i < gridCellCount; i++) {
+	    spatialGrid[i] = [];
+	  }
+	}
 	
 	// Assign particles to grid cells
 	for (let i = 0; i < particles.length; i++) {
@@ -163,24 +177,29 @@ function draw() {
 		text(chars[Math.floor(data[i])], (i % (width/size)) * size, Math.floor(i / (width/size)) * size);
 	}
 	
-	let nextParticles = [];
-	for(let p of particles) {
+	// Object pooling for particles
+	for (let i = particles.length - 1; i >= 0; i--) {
+	  const p = particles[i];
 	  p.pos.add(p.vel);
+	  
 	  // Simplify movement in emergency mode
 	  if (!emergencyMode) {
 	    p.vel.rotate(noise(p.pos.x/100, p.pos.y/100)-0.5);
 	  }
+	  
+	  // Boundary checks
 	  if(p.pos.x < -20) p.pos.x = width+20;
 	  if(p.pos.x > width+20) p.pos.x = -20;
 	  if(p.pos.y < -20) p.pos.y = height+20;
 	  if(p.pos.y > height+20) p.pos.y = -20;
 	  
 	  p.life--;
-	  if (p.life > 0) {
-	    nextParticles.push(p);
+	  if (p.life <= 0) {
+	    // Return particle to pool
+	    particlePool.push(p);
+	    particles.splice(i, 1);
 	  }
 	}
-	particles = nextParticles;
 }
 
 // Emergency performance measures
@@ -213,7 +232,27 @@ function mouseDragged(){
   }
   
   if (particles.length > 500) return;
-  if(new p5.Vector(mouseX-pmouseX, mouseY-pmouseY).mag() > 5) particles.push({pos: new p5.Vector(mouseX, mouseY), vel: new p5.Vector(mouseX-pmouseX, mouseY-pmouseY).div(4), life: 200})
+  
+  // Create new particle using object pool
+  let particle;
+  if (particlePool.length > 0) {
+    particle = particlePool.pop();
+    particle.pos.set(mouseX, mouseY);
+    particle.vel.set(mouseX-pmouseX, mouseY-pmouseY).div(4);
+    particle.life = baseLife;
+    particle.size = startSize;
+  } else {
+    particle = {
+      pos: new p5.Vector(mouseX, mouseY),
+      vel: new p5.Vector(mouseX-pmouseX, mouseY-pmouseY).div(4),
+      life: baseLife,
+      size: startSize
+    };
+  }
+  
+  if(new p5.Vector(mouseX-pmouseX, mouseY-pmouseY).mag() > 5) {
+    particles.push(particle);
+  }
 }
 
 // Control functions
@@ -252,12 +291,24 @@ function togglePause() {
 // Generate particles for benchmark tests
 function generateParticles(count) {
   particles = [];
+  
   for (let i = 0; i < count; i++) {
-    particles.push({
-      pos: new p5.Vector(random(width), random(height)),
-      vel: new p5.Vector(random(-1, 1), random(-1, 1)).mult(2),
-      life: 10000 // Long life for benchmark tests
-    });
+    // Create new particle using object pool
+    let particle;
+    if (particlePool.length > 0) {
+      particle = particlePool.pop();
+      particle.pos.set(random(width), random(height));
+      particle.vel.set(random(-1, 1), random(-1, 1)).mult(2);
+      particle.life = 10000;
+    } else {
+      particle = {
+        pos: new p5.Vector(random(width), random(height)),
+        vel: new p5.Vector(random(-1, 1), random(-1, 1)).mult(2),
+        life: 10000,
+        size: startSize
+      };
+    }
+    particles.push(particle);
   }
 }
 

@@ -39,7 +39,35 @@ document.addEventListener('DOMContentLoaded', () => {
       window.DOTTERS.updateLifeSize(parseInt(lifeSizeSlider.value));
     }
   });
-
+  
+  // Auto Lifespan Toggle
+  const autoLifespanCheckbox = document.getElementById('autoLifespan');
+  autoLifespanCheckbox.addEventListener('change', (e) => {
+    if (window.DOTTERS) {
+      window.DOTTERS.setAutoLifespan(e.target.checked);
+    }
+  });
+  
+  // Target FPS Control
+  const targetFpsSlider = document.getElementById('targetFps');
+  const targetFpsValue = document.getElementById('targetFpsValue');
+  targetFpsSlider.addEventListener('input', () => {
+    targetFpsValue.textContent = targetFpsSlider.value;
+    if (window.DOTTERS) {
+      window.DOTTERS.setTargetFps(parseInt(targetFpsSlider.value));
+    }
+  });
+  
+  // Hysteresis Control
+  const hysteresisSlider = document.getElementById('hysteresis');
+  const hysteresisValue = document.getElementById('hysteresisValue');
+  hysteresisSlider.addEventListener('input', () => {
+    hysteresisValue.textContent = hysteresisSlider.value;
+    if (window.DOTTERS) {
+      window.DOTTERS.setHysteresis(parseInt(hysteresisSlider.value));
+    }
+  });
+  
   // Character Set Control
   const charSetSelect = document.getElementById('charSet');
   charSetSelect.addEventListener('change', () => {

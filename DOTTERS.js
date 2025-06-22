@@ -21,6 +21,16 @@ let paused = false;
 let emergencyMode = false; // For critical performance situations
 let lastEmergencyActivation = 0;
 
+// Dynamic lifespan optimization parameters
+let autoLifespan = true;
+let targetFps = 50;
+let hysteresis = 3; // ±FPS buffer zone
+const MAX_LIFE = 300;
+const MIN_LIFE = 50;
+const ADJUSTMENT_RATE = 0.05;
+let lastAdjustmentTime = 0;
+const ADJUSTMENT_COOLDOWN = 1000; // ms
+
 // Define multiple glyph sets
 const glyphSets = {
   default: [" ", "*", "•", "o", "0", "O", "●"],
@@ -58,12 +68,20 @@ function setup() {
     setTextColor,
     setFont,
     setShapeMode,
-    setGlyphMode
+    setGlyphMode,
+    setAutoLifespan,
+    setTargetFps,
+    setHysteresis
   };
 }
 
 function draw() {
   if (paused) return;
+  
+  // Adjust lifespan dynamically if enabled
+  if (autoLifespan) {
+    adjustLifespan();
+  }
   
   // Emergency performance mode activation
   if (fps > 0 && fps < 30 && millis() - lastEmergencyActivation > 5000) {
@@ -226,6 +244,33 @@ function draw() {
 	}
 }
 
+// Dynamic lifespan adjustment
+function adjustLifespan() {
+  // Apply adjustment cooldown
+  if (millis() - lastAdjustmentTime < ADJUSTMENT_COOLDOWN) return;
+  
+  // Calculate hysteresis boundaries
+  const upperBound = targetFps + hysteresis;
+  const lowerBound = targetFps - hysteresis;
+  
+  if (fps > lowerBound && fps < upperBound) {
+    // Within hysteresis band - no adjustment needed
+    return;
+  }
+  
+  const fpsDiff = targetFps - fps;
+  const adjustment = fpsDiff * ADJUSTMENT_RATE;
+  
+  // Apply with bounds checking
+  baseLife = constrain(
+    baseLife + adjustment,
+    MIN_LIFE,
+    MAX_LIFE
+  );
+  
+  lastAdjustmentTime = millis();
+}
+
 // Emergency performance measures
 function activateEmergencyMode() {
 	emergencyMode = true;
@@ -352,6 +397,19 @@ function setShapeMode(mode) {
 
 function setGlyphMode(mode) {
   globalGlyphMode = mode;
+}
+
+// New control functions for dynamic lifespan
+function setAutoLifespan(enabled) {
+  autoLifespan = enabled;
+}
+
+function setTargetFps(fps) {
+  targetFps = fps;
+}
+
+function setHysteresis(value) {
+  hysteresis = value;
 }
 
 function togglePause() {

@@ -43,6 +43,23 @@
     </div>
     
     <div class="control-group">
+      <label for="autoLifespan">Auto Lifespan</label>
+      <input type="checkbox" id="autoLifespan" checked>
+    </div>
+    
+    <div class="control-group">
+      <label for="targetFps">Target FPS</label>
+      <input type="range" id="targetFps" min="30" max="60" value="50">
+      <div class="value-display"><span id="targetFpsValue">50</span></div>
+    </div>
+    
+    <div class="control-group">
+      <label for="hysteresis">Hysteresis (FPS)</label>
+      <input type="range" id="hysteresis" min="1" max="10" value="3">
+      <div class="value-display"><span id="hysteresisValue">3</span></div>
+    </div>
+    
+    <div class="control-group">
       <button id="clearBtn">Clear Canvas</button>
       <button id="pauseBtn">Pause</button>
       <button id="benchmarkBtn">Run Benchmark</button>
